@@ -38,6 +38,7 @@ class ReflexAgent(Agent):
         Just like in the previous project, getAction takes a GameState and returns
         some Directions.X for some X in the set {North, South, West, East, Stop}
         """
+
         # Collect legal moves and successor states
         legalMoves = gameState.getLegalActions()
 
@@ -47,9 +48,8 @@ class ReflexAgent(Agent):
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = random.choice(bestIndices) # Pick randomly among the best
 
-        "Add more of your code here if you want to"
-
         return legalMoves[chosenIndex]
+
 
     def evaluationFunction(self, currentGameState, action):
         """
@@ -66,15 +66,75 @@ class ReflexAgent(Agent):
         Print out these variables to see what you're getting, then combine them
         to create a masterful evaluation function.
         """
-        # Useful information you can extract from a GameState (pacman.py)
+        # what happening next, t=1
         successorGameState = currentGameState.generatePacmanSuccessor(action)
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        
+        # dont choose a losing successor
+        if successorGameState.isLose():
+          return float('-inf')
 
-        "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        # always choose a winning successor
+        if successorGameState.isWin():
+          return float('inf')
+
+        # if this box is a power capsule, eat it
+        if len(currentGameState.getCapsules()) > len(successorGameState.getCapsules()):
+          return float('inf')
+
+        #
+        #  Compute the distance to closest ghost unafraid ghost
+        #
+        closestGhostDistance = getClosestGhostDistance(newPos, newGhostStates)
+        
+        # dont get close to ghosts
+        if closestGhostDistance <= 2:
+          return float('-inf')
+
+        # if this successor is a pellet, eat away
+        if len(currentGameState.getFood().asList()) > len(successorGameState.getFood().asList()):
+          return float('inf')
+
+        # dont linger (this jitters, but hey we're looking at successors only and just a few features)
+        if successorGameState.getPacmanPosition() == currentGameState.getPacmanPosition():
+          return -1
+
+        #
+        # Compute the distance to the closest food
+        #
+        closestFoodDistance = getClosestFoodDistance(newPos, newFood.asList())
+
+        # this could be much better
+        score = (closestGhostDistance / closestFoodDistance)
+
+        return score
+
+
+
+def getClosestGhostDistance(pos, ghostStates):
+  d = getClosestDistance(pos, [ghostState.getPosition() for ghostState in ghostStates if ghostState.scaredTimer < 2])
+  if d == 0:
+    return 999999
+  elif d >= 6:
+    return 6
+  return d
+
+
+def getClosestFoodDistance(pos, foodPositions):
+  return getClosestDistance(pos, foodPositions)
+
+
+def getClosestDistance(fromPos, dests):
+  distances = [util.manhattanDistance(fromPos, dest) for dest in dests]
+  if len(distances) == 0:
+    return 0
+  closest = distances[0]
+  for distance in distances:
+      if distance < closest:
+        closest = distance
+  return closest
 
 def scoreEvaluationFunction(currentGameState):
     """
