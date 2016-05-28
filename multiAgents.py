@@ -165,12 +165,10 @@ class MultiAgentSearchAgent(Agent):
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
-
 class MinimaxAgent(MultiAgentSearchAgent):
     """
       Your minimax agent (question 2)
     """
-
     def getAction(self, gameState):
         """
           Returns the minimax action from the current gameState using self.depth
@@ -220,9 +218,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
         logging.debug( '%s #### agent: %d optimalAction: %s optimalScore: %d', padding, agent, optimalAction, optimalScore )
         return (optimalScore,optimalAction)
 
-
-
-
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
       Your minimax agent with alpha-beta pruning (question 3)
@@ -232,8 +227,56 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
           Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        x, action = self.alphaBeta(0, gameState, 0, 0, float('-inf'), float('inf'))
+        logging.debug( 'alphabeta best action is %s', action )
+        logging.debug( '' )
+        logging.debug( '' )
+        return action
+
+    def alphaBeta(self, agent, state, depth, rDepth, alpha, beta):
+        """
+          Computes the minimax score using DFS
+            agent  - the index of the current agent to represent
+                     index 0 is always a maximizer, the rest are adversaries
+            state  - the current game state to evaluate
+            depth  - the current depth of the expansion
+                     this depth only increments after all agents have been considered
+            rDepth - the recursion depth, to format debug messages
+            alpha  - pacmans best score on path to root
+            beta   - ghosts best score on path to root
+        """
+        padding = '   ' * rDepth
+
+        # if we are at our depth limit or there are no moves, we are at a leaf node
+        # compute and return the score of this state
+        if( (depth == self.depth) or (len(state.getLegalActions(agent)) == 0)):
+          score = self.evaluationFunction(state)
+          logging.debug('%s LEAF: returning score %.1f', padding, score )
+          return (score,0)
+
+        optimalScore = float('-inf') if agent == 0 else float('inf')
+        optimalAction = Directions.STOP
+
+        for action in state.getLegalActions(agent):
+          logging.debug( '%s minimax agent: %d depth: %d action: %s', padding, agent, depth, action )
+          successor = state.generateSuccessor(agent, action)
+          nextAgent = (agent+1) % state.getNumAgents()
+          nextDepth = depth+1 if nextAgent == 0 else depth
+          score,x = self.alphaBeta(nextAgent, successor, nextDepth, rDepth+1, alpha, beta)
+          newOptimalScore = max(score, optimalScore) if agent == 0 else min(score, optimalScore)
+          optimalAction = optimalAction if newOptimalScore == optimalScore else action
+          optimalScore = newOptimalScore
+          if agent == 0:
+            if score > beta:
+              break
+            alpha = max(alpha, score)
+          else:
+            if score < alpha:
+              break
+            beta = min(beta, score)
+
+        logging.debug( '%s #### agent: %d optimalAction: %s optimalScore: %d', padding, agent, optimalAction, optimalScore )
+        return (optimalScore,optimalAction)
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
