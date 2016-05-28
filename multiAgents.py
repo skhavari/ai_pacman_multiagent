@@ -258,7 +258,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         optimalAction = Directions.STOP
 
         for action in state.getLegalActions(agent):
-          logging.debug( '%s minimax agent: %d depth: %d action: %s', padding, agent, depth, action )
+          logging.debug( '%s alphabeta agent: %d depth: %d action: %s', padding, agent, depth, action )
           successor = state.generateSuccessor(agent, action)
           nextAgent = (agent+1) % state.getNumAgents()
           nextDepth = depth+1 if nextAgent == 0 else depth
@@ -290,8 +290,59 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           All ghosts should be modeled as choosing uniformly at random from their
           legal moves.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        x,action = self.expectimax(0, gameState, 0, 0)
+
+        logging.debug( 'expectimax best action is %s', action )
+        logging.debug( '' )
+        logging.debug( '' )
+        return action
+
+    def expectimax(self, agent, state, depth, rDepth):
+        """
+          Computes the expectimax score using DFS
+            agent  - the index of the current agent to represent
+                     index 0 is always a maximizer, the rest are adversaries
+            state  - the current game state to evaluate
+            depth  - the current depth of the expansion
+                     this depth only increments after all agents have been considered
+            rDepth - the recursion depth, to format debug messages
+
+            call this with 0,gameState, 0, 0 to kick things off
+        """
+        padding = '   ' * rDepth
+        numActions = len(state.getLegalActions(agent))
+
+        # if we are at our depth limit or there are no moves, we are at a leaf node
+        # compute and return the score of this state
+        if( (depth == self.depth) or (numActions == 0)):
+          score = self.evaluationFunction(state)
+          logging.debug('%s LEAF: returning score %.1f', padding, score )
+          return (score,0)
+
+        optimalScore = float('-inf') if agent == 0 else float('inf')
+        optimalAction = Directions.STOP
+        p = 1.0 / numActions
+        expectValue = 0
+
+        for action in state.getLegalActions(agent):
+          logging.debug( '%s expectimax agent: %d depth: %d action: %s', padding, agent, depth, action )
+          successor = state.generateSuccessor(agent, action)
+          nextAgent = (agent+1) % state.getNumAgents()
+          nextDepth = depth+1 if nextAgent == 0 else depth
+          score,x = self.expectimax(nextAgent, successor, nextDepth, rDepth+1)
+          if agent == 0:
+            newOptimalScore = max(score, optimalScore)  
+            optimalAction = optimalAction if newOptimalScore == optimalScore else action
+            optimalScore = newOptimalScore
+          else:
+            expectValue += ( p * score )
+
+        if agent == 0:
+          logging.debug( '%s #### agent: %d optimalAction: %s optimalScore: %d', padding, agent, optimalAction, optimalScore )
+          return (optimalScore,optimalAction)
+        else:
+          logging.debug( '%s #### agent: %d expectValue: %.1f', padding, agent, expectValue )
+          return (expectValue, 0)
 
 def betterEvaluationFunction(currentGameState):
     """
