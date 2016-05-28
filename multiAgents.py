@@ -1,3 +1,4 @@
+
 # multiAgents.py
 # --------------
 # Licensing Information:  You are free to use or extend these projects for
@@ -15,6 +16,8 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
+import logging
+#logging.basicConfig(level=logging.DEBUG)
 
 from game import Agent
 
@@ -111,8 +114,6 @@ class ReflexAgent(Agent):
 
         return score
 
-
-
 def getClosestGhostDistance(pos, ghostStates):
   d = getClosestDistance(pos, [ghostState.getPosition() for ghostState in ghostStates if ghostState.scaredTimer < 2])
   if d == 0:
@@ -121,10 +122,8 @@ def getClosestGhostDistance(pos, ghostStates):
     return 6
   return d
 
-
 def getClosestFoodDistance(pos, foodPositions):
   return getClosestDistance(pos, foodPositions)
-
 
 def getClosestDistance(fromPos, dests):
   distances = [util.manhattanDistance(fromPos, dest) for dest in dests]
@@ -166,6 +165,7 @@ class MultiAgentSearchAgent(Agent):
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
+
 class MinimaxAgent(MultiAgentSearchAgent):
     """
       Your minimax agent (question 2)
@@ -175,21 +175,53 @@ class MinimaxAgent(MultiAgentSearchAgent):
         """
           Returns the minimax action from the current gameState using self.depth
           and self.evaluationFunction.
-
-          Here are some method calls that might be useful when implementing minimax.
-
-          gameState.getLegalActions(agentIndex):
-            Returns a list of legal actions for an agent
-            agentIndex=0 means Pacman, ghosts are >= 1
-
-          gameState.generateSuccessor(agentIndex, action):
-            Returns the successor game state after an agent takes an action
-
-          gameState.getNumAgents():
-            Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        x,action = self.minimax(0, gameState, 0, 0)
+
+        logging.debug( 'minimax best action is %s', action )
+        logging.debug( '' )
+        logging.debug( '' )
+        return action
+
+    def minimax(self, agent, state, depth, rDepth):
+        """
+          Computes the minimax score using DFS
+            agent  - the index of the current agent to represent
+                     index 0 is always a maximizer, the rest are adversaries
+            state  - the current game state to evaluate
+            depth  - the current depth of the expansion
+                     this depth only increments after all agents have been considered
+            rDepth - the recursion depth, to format debug messages
+
+            call this with 0,gameState, 0, 0 to kick things off
+        """
+        padding = '   ' * rDepth
+
+        # if we are at our depth limit or there are no moves, we are at a leaf node
+        # compute and return the score of this state
+        if( (depth == self.depth) or (len(state.getLegalActions(agent)) == 0)):
+          score = self.evaluationFunction(state)
+          logging.debug('%s LEAF: returning score %.1f', padding, score )
+          return (score,0)
+
+        optimalScore = float('-inf') if agent == 0 else float('inf')
+        optimalAction = Directions.STOP
+
+        for action in state.getLegalActions(agent):
+          logging.debug( '%s minimax agent: %d depth: %d action: %s', padding, agent, depth, action )
+          successor = state.generateSuccessor(agent, action)
+          nextAgent = (agent+1) % state.getNumAgents()
+          nextDepth = depth+1 if nextAgent == 0 else depth
+          score,x = self.minimax(nextAgent, successor, nextDepth, rDepth+1)
+          newOptimalScore = max(score, optimalScore) if agent == 0 else min(score, optimalScore)
+          optimalAction = optimalAction if newOptimalScore == optimalScore else action
+          optimalScore = newOptimalScore
+
+        logging.debug( '%s #### agent: %d optimalAction: %s optimalScore: %d', padding, agent, optimalAction, optimalScore )
+        return (optimalScore,optimalAction)
+
+
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -230,4 +262,3 @@ def betterEvaluationFunction(currentGameState):
 
 # Abbreviation
 better = betterEvaluationFunction
-
